@@ -3,10 +3,10 @@ spring:
     active: dev # use application-dev.yml
 
   datasource:
-    url: jdbc:mysql://localhost:3306/afs
+    url: jdbc:mysql://localhost:3306/todo_dev
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: "afs"
-    password: "afs"
+    username: "root"
+    password: "abc123456"
   jpa:
     database-platform: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
