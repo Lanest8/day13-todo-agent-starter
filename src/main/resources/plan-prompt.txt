@@ -6,12 +6,21 @@
 2. 计划制定阶段：分析用户输入，合理选择和组合工具，制定可执行的计划。 用户输入如下：
 {{ $input }}
 
+特别注意：如果用户要求创建多个项目（如"创建几个新的todo"），你应该：
+- 理解用户想要创建多个项目
+- 为每个项目生成单独的create调用
+- 如果用户没有指定具体数量，默认创建3个项目
+- 为每个项目提供有意义的默认内容
+- 以多个独立的JSON对象格式输出，而不是JSON数组
+
 3. 计划执行阶段：每一步需明确调用的工具及参数。
 
 请以 JSON 格式输出你的计划，每一步包含：
 functionName：工具名称
 description：工具用途
 variables：输入参数
+
+重要：每个计划步骤必须是独立的JSON对象，如果有多个步骤，请输出多个独立的JSON对象，不要使用数组形式。
 
 示例输出：
 {"function":"updateById","description":"Update todo by id. Should set id, if not call findAll first.","schema":"{
@@ -82,5 +91,10 @@ variables：输入参数
   "required" : [ ],
   "additionalProperties" : false
 }"}
+
+对于创建多个todo的请求，正确的输出格式应该像这样（注意是多个独立的JSON对象，不是数组）：
+{"function":"create","description":"Create first new todo item","variables":{"todo":{"text":"第一个待办事项","done":false}}}
+{"function":"create","description":"Create second new todo item","variables":{"todo":{"text":"第二个待办事项","done":false}}}
+{"function":"create","description":"Create third new todo item","variables":{"todo":{"text":"第三个待办事项","done":false}}}
 
 请根据以上信息，生成完整且可执行的计划。

@@ -249,6 +249,13 @@ public class PlannerService {
      */
     private PlanTaskResult parseAsDirectJson(String response) {
         try {
+            // Check if response contains multiple JSON objects
+            if (response.indexOf('}') < response.lastIndexOf('{')) {
+                // Multiple JSON objects case
+                return parseMultipleJsonObjects(response);
+            }
+
+            // Single JSON object case
             JsonNode jsonNode = objectMapper.readTree(response);
             PlanInfo planInfo = objectMapper.treeToValue(jsonNode, PlanInfo.class);
             logger.info("Successfully parsed JSON format execution plan");
@@ -258,6 +265,63 @@ public class PlannerService {
             throw new RuntimeException("Unable to parse AI's JSON response", e);
         }
     }
+
+    /**
+     * Parse multiple JSON objects in a single response
+     */
+    private PlanTaskResult parseMultipleJsonObjects(String response) {
+        logger.info("Parsing multiple JSON objects from response");
+        List<PlanInfo> planInfos = new ArrayList<>();
+
+        // Split the response into individual JSON objects
+        int start = 0;
+        int braceCount = 0;
+        boolean inString = false;
+        char stringDelimiter = 0;
+
+        for (int i = 0; i < response.length(); i++) {
+            char c = response.charAt(i);
+
+            // Handle string literals
+            if (!inString && (c == '"' || c == '\'')) {
+                inString = true;
+                stringDelimiter = c;
+            } else if (inString && c == stringDelimiter && (i == 0 || response.charAt(i-1) != '\\')) {
+                inString = false;
+                stringDelimiter = 0;
+            }
+
+            // Skip braces inside strings
+            if (inString) {
+                continue;
+            }
+
+            if (c == '{') {
+                if (braceCount == 0) {
+                    start = i; // Mark the start of a JSON object
+                }
+                braceCount++;
+            } else if (c == '}') {
+                braceCount--;
+                if (braceCount == 0) {
+                    // We've found a complete JSON object
+                    try {
+                        String jsonObject = response.substring(start, i + 1);
+                        JsonNode jsonNode = objectMapper.readTree(jsonObject);
+                        PlanInfo planInfo = objectMapper.treeToValue(jsonNode, PlanInfo.class);
+                        planInfos.add(planInfo);
+                        logger.debug("Successfully parsed JSON object: {}", planInfo.getFunctionName());
+                    } catch (JsonProcessingException e) {
+                        logger.warn("Failed to parse JSON object: {}", response.substring(start, i + 1), e);
+                    }
+                }
+            }
+        }
+
+        logger.info("Parsed {} JSON objects from response", planInfos.size());
+        return new PlanTaskResult(planInfos);
+    }
+
 
     /**
      * Parse execution plan from Markdown code blocks
